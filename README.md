@@ -1,3 +1,5 @@
+![VOLPAROSSA Citizen — an open pop-up book with a town and people gathering around a table](docs/assets/banner-volparossa-citizen.png)
+
 # VOLPAROSSA Citizen
 
 Citizen is an application for decentralized proposals, deliberation and referenda,
