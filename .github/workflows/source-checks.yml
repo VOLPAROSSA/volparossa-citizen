@@ -1,0 +1,28 @@
+name: Citizen simulation source checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  simulation-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check fictional electorate and referendum simulation
+        run: python3 -B -m unittest discover -s tests -v
+
+# This is a deterministic fictional-identity simulation, not a real election,
+# identity-verification system, secret ballot or legal authority.
