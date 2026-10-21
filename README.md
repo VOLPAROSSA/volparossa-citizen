@@ -2,10 +2,19 @@
 
 # VOLPAROSSA Citizen
 
-Citizen is an application for decentralized proposals, deliberation and referenda,
-intended to work alongside existing democratic institutions. This first executable
-component simulates the agreed support and voting rules using fictional identities.
-It is not a live election service, an identity-verification system or legal authority.
+**Make a public proposal's rules as inspectable as its result.**
+
+Who is eligible, how much support starts a vote, and what does abstaining mean?
+VOLPAROSSA Citizen is developing proposals, deliberation and referenda alongside
+existing democratic institutions, with explicit rules that people can examine
+and challenge. The intended [VOLPAROSSA core](https://github.com/VOLPAROSSA/volparossa)
+integration supplies shared transport, private storage and compute; Citizen keeps
+the procedure and eligibility rules visible in the application.
+
+The executable starting point uses **fictional identities** to explore support,
+voting and repeat procedures. It is not a recognized election, a real-person
+identity check or legal authority. Help examine edge cases and the unresolved
+registration and secret-ballot requirements before a real-world pilot.
 
 ## Run the simulation
 
