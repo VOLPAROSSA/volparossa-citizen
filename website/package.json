@@ -1,0 +1,12 @@
+{
+  "name": "volparossa-citizen-site-review",
+  "private": true,
+  "scripts": {
+    "qa": "node scripts/browser_check.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "playwright": "1.62.1",
+    "playwright-core": "1.62.1"
+  }
+}
