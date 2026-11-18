@@ -1,0 +1,64 @@
+<article class="newspaper" aria-labelledby="lead-title">
+  <header class="mast">
+    <div class="nameplate"><p class="paper-name">VOLPAROSSA <i>Citizen</i></p><p class="edition">The Saturday Edition</p></div>
+    <div class="edition-line"><span>Research and simulation</span><a href="{{repository}}">Citizen repository <span aria-hidden="true">↗</span></a></div>
+  </header>
+
+  <section class="front" aria-labelledby="lead-title">
+    <div class="front-grid">
+      <div class="headline"><h1 id="lead-title">Follow a town proposal.</h1><p class="deck">Saturday afternoons at the library.</p></div>
+      <aside class="civic-notice" aria-labelledby="notice-title"><p class="rubric">Civic notice</p><h2 id="notice-title">Saturday library hours</h2>
+        <p>In this fictional town, residents propose opening the public library on Saturday afternoons.</p></aside>
+      <div class="paper-actions"><a class="paper-button primary" href="#proposal">Follow the proposal</a><a class="paper-button" href="#results">Explore the results</a></div>
+    </div>
+    {{library}}
+  </section>
+
+  <div class="proposal columns ruled" id="proposal">
+    <section aria-labelledby="electorate-title"><h2 id="electorate-title">Who counts?</h2>
+      <dl class="numbers electorate"><div><dt>eligible residents</dt><dd>101</dd></div><div><dt>registered accounts</dt><dd>102</dd></div></dl>
+      <p>The town fixes its list of 101 eligible residents before collecting support. The demo has 102 registered accounts, including one for a child outside that list. The thresholds use all 101 eligible residents.</p>
+      <details><summary>Who can take part?</summary><p>Taking part requires an account and a place on the fixed list. Eligible residents who have no account still count towards the thresholds.</p></details>
+    </section>
+    <section aria-labelledby="support-title"><h2 id="support-title">When does voting open?</h2>
+      <dl class="numbers supporters"><div><dt>supporters <small>Collecting support</small></dt><dd>33</dd></div><div><dt>supporters <small>Voting opens</small></dt><dd>34</dd></div></dl>
+      <p>At least one third of eligible residents must support holding a referendum. Someone who supports holding a vote can still vote against the proposal.</p>
+      <details><summary>Check the support threshold</summary><p>Count each supporter once. With 33 supporters, 3 × 33 = 99, below the required 101. With 34, 3 × 34 = 102 and voting opens.</p></details>
+    </section>
+  </div>
+
+  <section class="results ruled" id="results" aria-labelledby="result-title">
+    <h2 id="result-title">What difference does one vote make?</h2>
+    <div class="results-grid">
+      <div><p class="threshold">Decision threshold: 68 of 101.</p>
+        <p>Adoption requires at least two thirds of all eligible residents to vote yes. Rejection requires the same number to vote no. Abstaining or staying home leaves the threshold unchanged.</p>
+        <details><summary>Check the decision threshold</summary><p>Twice the electorate is 202. A count of 67 gives 3 × 67 = 201. A count of 68 gives 3 × 68 = 204. The same test applies to no votes, so 34 yes and 67 no is also indeterminate.</p></details></div>
+      <div><table><caption>Three simulated outcomes for the same proposal</caption>
+        <thead><tr><th scope="col">Yes</th><th scope="col">No</th><th scope="col">Result</th></tr></thead>
+        <tbody>{{outcome_rows}}</tbody></table>
+        <p class="table-note">Compare the first two rows. If one resident switches from no to yes, the proposal reaches 68 yes votes and is adopted.</p></div>
+    </div>
+  </section>
+
+  <section class="follow-up ruled" aria-labelledby="next-title">
+    <div class="follow-copy"><h2 id="next-title">What happens next?</h2>
+      <p>After an indeterminate result, a repeat can be requested three calendar years after the scheduled close. A new procedure starts only when someone explicitly requests it.</p>
+      <p>The proposal keeps the same version. One third of the new electorate must support holding the vote again.</p></div>
+    <figure><div class="document archive">{{archive}}<div class="archive-print" aria-hidden="true"><strong>Archive</strong><span>Saturday library hours</span></div></div>
+      <figcaption><strong><time datetime="2026-12-01">1 December 2026</time> · Original result archived.</strong> The original electorate and result remain on record.</figcaption></figure>
+    <figure><div class="document form">{{form}}<span class="form-print">Support for the new procedure</span></div>
+      <figcaption><strong><time datetime="2029-12-01">1 December 2029</time> · Repeat request possible.</strong> A requested repeat starts with a newly fixed electorate, zero supporters and no ballots.</figcaption></figure>
+  </section>
+
+  <section class="research ruled" aria-label="Implementation status">
+    <div class="columns"><div><h2>Demonstrated locally</h2>
+      <p>Run a local simulation with fictional residents. Follow support, voting, counting and an explicitly requested repeat.</p>{{street}}</div>
+      <div><h2>Open research</h2>
+      <p>The demo holds ballots in plain text in memory. Secret ballots, verified registration and independent tally verification remain open research.</p>{{ballot}}</div></div>
+    <a class="paper-link" href="{{repository}}#implementation-status">Explore implementation status <span aria-hidden="true">↗</span></a>
+  </section>
+
+  <section class="closing ruled" aria-labelledby="closing-title"><h2 id="closing-title">Read the rules. Reproduce the count.</h2>
+    <div class="closing-actions"><a class="paper-button primary" href="{{repository}}#run-the-simulation">Run the simulation</a><a class="paper-link" href="{{repository}}#implemented-rules">Read the procedure <span aria-hidden="true">↗</span></a></div>
+  </section>
+</article>

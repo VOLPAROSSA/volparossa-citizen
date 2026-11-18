@@ -16,6 +16,8 @@ voting and repeat procedures. It is not a recognized election, a real-person
 identity check or legal authority. Help examine edge cases and the unresolved
 registration and secret-ballot requirements before a real-world pilot.
 
+[Follow the fictional library proposal in The Saturday Edition](https://volparossa.org/volparossa-citizen/).
+
 ## Run the simulation
 
 Python 3.10 or newer is sufficient; no dependency installation is needed.

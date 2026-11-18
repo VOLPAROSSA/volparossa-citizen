@@ -1,0 +1,3 @@
+vendor/theme/** -text
+*.webp binary
+*.jpg binary

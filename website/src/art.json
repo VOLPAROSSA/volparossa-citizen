@@ -1,0 +1,53 @@
+{
+  "library": {
+    "widths": [
+      600,
+      960,
+      1440,
+      2040
+    ],
+    "height": 680,
+    "sizes": "(max-width: 1320px) 96vw, 1240px",
+    "alt": "Arched public library entrance beneath leafy trees in the fictional town."
+  },
+  "archive": {
+    "widths": [
+      400,
+      680,
+      920
+    ],
+    "height": 444,
+    "sizes": "(max-width: 510px) 92vw, (max-width: 950px) 46vw, 385px",
+    "alt": "Closed archive box on a shelf, holding the original library proposal record."
+  },
+  "form": {
+    "widths": [
+      400,
+      680,
+      920
+    ],
+    "height": 444,
+    "sizes": "(max-width: 510px) 92vw, (max-width: 950px) 46vw, 385px",
+    "alt": "Blank ruled support sheet beside a pen."
+  },
+  "street": {
+    "widths": [
+      500,
+      860,
+      1240
+    ],
+    "height": 443,
+    "sizes": "(max-width: 740px) 94vw, (max-width: 1320px) 46vw, 600px",
+    "alt": "Residents walking past trees and caf\u00e9s in the town square."
+  },
+  "ballot": {
+    "widths": [
+      500,
+      860,
+      1240
+    ],
+    "height": 443,
+    "sizes": "(max-width: 740px) 94vw, (max-width: 1320px) 46vw, 600px",
+    "alt": "A hand lowering an unmarked slip of paper into a ballot box."
+  }
+}

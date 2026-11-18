@@ -1,0 +1,109 @@
+name: Citizen website
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/citizen-website.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/citizen-website.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate static Citizen website
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Check out the event source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and check the preview
+        id: preview
+        run: |
+          python3 website/scripts/build_site.py
+          python3 website/scripts/check_site.py
+      - name: Set up Node for browser checks
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - name: Install pinned browser review dependencies
+        working-directory: website
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          echo "CHROME_PATH=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          google-chrome --version
+      - name: Check the rendered preview under the project subpath
+        env:
+          QA_ENGINES: chromium
+        run: |
+          python3 -m http.server 8799 --bind 127.0.0.1 --directory website/preview > "$RUNNER_TEMP/citizen-http.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 5 --retry-connrefused http://127.0.0.1:8799/volparossa-citizen/ -o /dev/null
+          npm --prefix website run qa
+      - name: Preserve the preview and rendered review
+        if: ${{ !cancelled() && steps.preview.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: citizen-website-preview
+          path: |
+            website/preview/volparossa-citizen/
+            website/qa/browser/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Prepare production Pages artifact
+    needs: validate
+    if: github.repository == 'VOLPAROSSA/volparossa-citizen' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the validated source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and check the production website
+        run: |
+          python3 website/scripts/build_site.py --production --output website/dist/volparossa-citizen
+          python3 website/scripts/check_site.py --production --output website/dist/volparossa-citizen
+      - name: Upload the generated site root
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: website/dist/volparossa-citizen
+          include-hidden-files: true
+
+  deploy:
+    name: Publish Citizen project site
+    needs: [validate, build]
+    if: github.repository == 'VOLPAROSSA/volparossa-citizen' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: citizen-github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Verify the existing Pages configuration
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          enablement: false
+      - name: Deploy the checked static artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
