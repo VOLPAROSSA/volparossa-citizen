@@ -65,6 +65,19 @@ and trustee keys. A reader checks the intended elections with the following comm
 python3 -B citizen.py belenios-replay public-referenda.zip --setup-pin public-setup.json --tool ./belenios-runtime/belenios-tool
 ```
 
+To read a published referendum from local Core storage, use its signed manifest,
+the publisher public key you trust and the existing cache containing its chunks.
+Citizen asks the Core CLI to reconstruct the ZIP in a temporary directory, checks
+the publisher and then runs the same Belenios verification. Both steps work offline.
+The trusted setup identifies the intended elections even if the same publisher
+has issued another valid exercise. An expired Core manifest requires a current
+publication. An already saved ZIP remains readable with `belenios-replay`.
+
+```sh
+python3 -B citizen.py belenios-replay-cache public.pb --publisher-key "$PUBLISHER_KEY" \
+  --cache ./public-cache --setup-pin public-setup.json --tool ./belenios-runtime/belenios-tool
+```
+
 The ZIP contains the initial and final public Belenios archives and a Citizen
 report. A reader can replay the proofs after all fictional private credentials and
 trustee keys have been discarded. The exercise uses one operator for registration,

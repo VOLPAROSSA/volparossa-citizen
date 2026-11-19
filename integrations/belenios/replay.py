@@ -19,6 +19,26 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def verify_cached(core, tool, manifest, publisher_key, caches, setup_pin):
+    require(len(publisher_key) == 64 and all(c in "0123456789abcdefABCDEF" for c in publisher_key),
+            "expected a 32-byte public publisher key in hexadecimal")
+    require(1 <= len(caches) <= 16 and all(Path(path).is_dir() for path in caches),
+            "expected 1 through 16 existing local Core caches")
+    require(Path(setup_pin).is_file(), "independently retained setup pin unavailable")
+    with tempfile.TemporaryDirectory() as scratch:
+        bundle = Path(scratch) / "public-referenda.zip"
+        command = [core, "content", "assemble", "--manifest", manifest, "--publisher-key", publisher_key,
+                   "--output", str(bundle)]
+        for path in caches:
+            command.extend(["--cache", path])
+        receipt = json.loads(subprocess.check_output(command, stdin=subprocess.DEVNULL, timeout=120))
+        require(isinstance(receipt, dict) and receipt.get("operation") == "offline_content_assemble"
+                and receipt.get("network_retrieval") is False and receipt.get("publisher_key_hex") == publisher_key.lower()
+                and receipt.get("output") == str(bundle) and receipt.get("bytes") == bundle.stat().st_size,
+                "Core did not confirm the local publisher-bound archive")
+        verify(tool, bundle, setup_pin)
+
+
 def verify(executable, bundle, setup_pin=None):
     matches = shutil.which(executable)
     require(matches, "Belenios executable unavailable")
