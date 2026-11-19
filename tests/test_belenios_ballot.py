@@ -52,12 +52,12 @@ class IndependentVoter(unittest.TestCase):
                 sandbox = wrapper + ["--unshare-net", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
                     "--die-with-parent", *caps,
                     "--ro-bind", "/usr", "/usr", "--symlink", "usr/lib", "/lib", "--symlink", "usr/lib64", "/lib64",
-                    "--symlink", "usr/bin", "/bin", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp",
+                    "--symlink", "usr/bin", "/bin", "--dev", "/dev", "--proc", "/proc", "--perms", "01777", "--tmpfs", "/tmp",
                     "--ro-bind", str(code / "citizen.py"), "/app/citizen.py",
                     "--ro-bind", str(code / "belenios_demo.py"), "/app/belenios_demo.py",
                     "--ro-bind", str(code / "integrations"), "/app/integrations",
                     "--ro-bind", str(Path(tool.path).parent), "/runtime",
-                    "--bind", str(voter), "/voter", "--chdir", "/voter", "--", *drop, "/usr/bin/python3", "-B"]
+                    "--bind", str(voter), "/voter", "--chdir", "/", "--", *drop, "/usr/bin/python3", "-B"]
                 subprocess.run(sandbox + ["-c", "import os, sys; assert os.geteuid() == int(sys.argv[1]) != 0; "
                     "assert not os.path.exists(sys.argv[2]); assert len(os.listdir('/tmp')) == 0; "
                     "assert len(open('/proc/net/dev').read().splitlines()) == 3", str(os.getuid()), str(authority)],
@@ -66,8 +66,9 @@ class IndependentVoter(unittest.TestCase):
                 voter_setup, voter_tool = "/voter/initial.bel", "/runtime/belenios-tool"
 
             def prepare(person, choice, credential, sha=pin, terminal=False):
+                destination = "/voter/" + person if isolation else person
                 cmd = voter_cli + ["belenios-ballot", voter_setup, "--setup-sha256", sha,
-                             "--output", person, "--tool", voter_tool]
+                             "--output", destination, "--tool", voter_tool]
                 if terminal:
                     # The terminal belongs directly to the voter process, including on sudo configurations
                     # that allocate another pseudoterminal for a privileged mount helper.
