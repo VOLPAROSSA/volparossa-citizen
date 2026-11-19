@@ -55,6 +55,16 @@ python3 -B citizen.py belenios-demo --tool ./belenios-runtime/belenios-tool --pu
 python3 -B integrations/belenios/replay.py public-referenda.zip --tool ./belenios-runtime/belenios-tool
 ```
 
+To identify the same three elections later, add `--setup-pin public-setup.json`
+when running `belenios-demo`. Citizen writes the SHA-256 digest of each public
+setup archive before casting the first ballot. Retain the file through a trusted
+channel. Even a valid second run of the same exercise has different credentials
+and trustee keys. A reader checks the intended elections with the following command.
+
+```sh
+python3 -B citizen.py belenios-replay public-referenda.zip --setup-pin public-setup.json --tool ./belenios-runtime/belenios-tool
+```
+
 The ZIP contains the initial and final public Belenios archives and a Citizen
 report. A reader can replay the proofs after all fictional private credentials and
 trustee keys have been discarded. The exercise uses one operator for registration,

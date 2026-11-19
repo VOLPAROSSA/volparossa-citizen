@@ -34,11 +34,21 @@ jobs:
             bash -eu -o pipefail -s -- "$RUNNER_TEMP" <<'OFFLINE'
           test "$(id -u)" -ne 0
           awk -F: 'NR>2 {gsub(/ /,"",$1); if ($1!="lo") exit 1; interfaces++} END {if(interfaces!=1) exit 1}' /proc/net/dev
-          python3 -B citizen.py belenios-demo --tool "$1/belenios/belenios-tool" --public-bundle "$1/public-referenda.zip"
+          python3 -B citizen.py belenios-demo --tool "$1/belenios/belenios-tool" --public-bundle "$1/public-referenda.zip" --setup-pin "$1/public-setup.json"
           python3 -B integrations/belenios/replay.py "$1/public-referenda.zip" --tool "$1/belenios/belenios-tool"
+          python3 -B citizen.py belenios-replay "$1/public-referenda.zip" --setup-pin "$1/public-setup.json" --tool "$1/belenios/belenios-tool"
+          python3 -B citizen.py belenios-demo --tool "$1/belenios/belenios-tool" --public-bundle "$1/another.zip" --setup-pin "$1/another-setup.json" >/dev/null
+          python3 -B citizen.py belenios-replay "$1/another.zip" --setup-pin "$1/another-setup.json" --tool "$1/belenios/belenios-tool"
+          if python3 -B citizen.py belenios-replay "$1/another.zip" --setup-pin "$1/public-setup.json" --tool "$1/belenios/belenios-tool" 2>"$1/mismatched.stderr"; then exit 1; fi
+          grep -Fx 'referendum setup differs from the independently retained pin' "$1/mismatched.stderr"
           OFFLINE
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: synthetic-public-referenda
           path: ${{ runner.temp }}/public-referenda.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: synthetic-referendum-public-setup
+          path: ${{ runner.temp }}/public-setup.json
           if-no-files-found: error

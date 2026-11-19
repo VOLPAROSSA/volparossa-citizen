@@ -296,14 +296,23 @@ if __name__ == "__main__":
     encrypted = commands.add_parser("belenios-demo", help="run the offline encrypted library-hours exercise")
     encrypted.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     encrypted.add_argument("--public-bundle", help="create a new ZIP with public setup and final archives")
+    encrypted.add_argument("--setup-pin", help="write the three public setup digests to a new, separate file before voting")
+    replay = commands.add_parser("belenios-replay", help="verify a public exercise against an independently retained setup")
+    replay.add_argument("bundle", help="public referendum ZIP")
+    replay.add_argument("--setup-pin", required=True, help="separately trusted setup digest file")
+    replay.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     args = parser.parse_args()
     if args.command == "demo":
         result = demo()
     else:
         import subprocess
-        from belenios_demo import run
         try:
-            result = run(args.tool, args.public_bundle)
+            if args.command == "belenios-replay":
+                from integrations.belenios.replay import verify
+                verify(args.tool, args.bundle, args.setup_pin)
+                parser.exit(0)
+            from belenios_demo import run
+            result = run(args.tool, args.public_bundle, args.setup_pin)
         except (OSError, ValueError, subprocess.TimeoutExpired) as error:
             parser.exit(1, f"{error}\n")
     print(json.dumps(result, indent=2, sort_keys=True))
