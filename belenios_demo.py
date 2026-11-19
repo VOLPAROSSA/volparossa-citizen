@@ -76,52 +76,64 @@ def cast(tool, work, credential, choice):
     tool(work, "archive", "add-event", "--type", "Ballot", data=ballot)
 
 
-def scenario(tool, public, name, choices):
-    people = tuple(synthetic_identity(i) for i in range(1, 7))
+def open_cases(tool, public, private, people):
     registered = people[:5]
-    procedure = Procedure("sim-" + name, Proposal("sim-library-hours", 1, "sim-town"),
-                          Electorate("sim-town-roll", "sim-town", START, people), Registration(registered),
-                          starts_at=START, support_until=SUPPORT_END, closes_at=CLOSE)
-    procedure.support(people[0], at=START)
-    check(procedure.state == "collecting_support", "one supporter opened a six-person referendum")
-    procedure.support(people[1], at=START)
-    check(procedure.state == "referendum", "required support did not open the referendum")
+    opened = {}
+    hashes = {}
+    for name in CASES:
+        work = private / name
+        work.mkdir(mode=0o700)
+        procedure = Procedure("sim-" + name, Proposal("sim-library-hours", 1, "sim-town"),
+                              Electorate("sim-town-roll", "sim-town", START, people), Registration(registered),
+                              starts_at=START, support_until=SUPPORT_END, closes_at=CLOSE)
+        procedure.support(people[0], at=START)
+        check(procedure.state == "collecting_support", "one supporter opened a six-person referendum")
+        procedure.support(people[1], at=START)
+        check(procedure.state == "referendum", "required support did not open the referendum")
+        archive, credentials = setup(tool, work, registered)
+        initial = public / name / "setup" / "election.bel"
+        initial.parent.mkdir(parents=True)
+        shutil.copyfile(archive, initial)
+        hashes[name] = hashlib.sha256(initial.read_bytes()).hexdigest()
+        opened[name] = (procedure, work, archive, credentials)
+    return opened, {"schema": "volparossa.citizen.belenios-setup.v1", "sha256": hashes}
+
+
+def scenario(tool, public, name, choices, people, opened):
+    registered = people[:5]
     initial, final = public / "setup", public / "final"
-    initial.mkdir(parents=True)
     final.mkdir()
     changed = public / "altered"
     changed.mkdir()
-    with tempfile.TemporaryDirectory() as private:
-        work = Path(private)
-        archive, credentials = setup(tool, work, registered)
-        shutil.copyfile(archive, initial / "election.bel")
-        for person, choice in zip(registered, choices):
-            procedure.vote(person, choice, at=SUPPORT_END)
-            cast(tool, work, credentials[person], choice)
-        try:
-            procedure.vote(registered[0], Choice.ABSTAIN, at=SUPPORT_END)
-        except ProcedureError as exc:
-            check(str(exc) == "DUPLICATE_VOTE", "unexpected duplicate decision")
-        else:
-            raise ValueError("Citizen accepted a repeat vote")
-        procedure.close(at=CLOSE)
-        report = procedure.report()
-        tool(work, "archive", "add-event", "--type", "EndBallots")
-        encrypted = tool(work, "election", "compute-encrypted-tally")
-        tool(work, "archive", "add-event", "--type", "EncryptedTally", data=encrypted)
-        [key] = work.glob("*.privkey")
-        decryption = tool(work, "election", "decrypt", "--privkey", key.name, "--trustee-id", "1")
-        tool(work, "archive", "add-event", "--type", "PartialDecryption", data=decryption)
-        shutil.copyfile(archive, changed / archive.name)
-        result = tool(work, "election", "compute-result")
-        tool(work, "archive", "add-event", "--type", "Result", data=result)
-        shutil.copyfile(archive, final / "election.bel")
-        # The altered archive uses Belenios' own event writer, with valid archive framing.
-        wrong = json.loads(result)
-        wrong["result"][0][0] -= 1
-        wrong["result"][0][1] += 1
-        tool(changed, "archive", "add-event", "--type", "Result", data=json.dumps(wrong, separators=(",", ":")).encode())
-        del credentials
+    procedure, work, archive, credentials = opened
+    for person, choice in zip(registered, choices):
+        procedure.vote(person, choice, at=SUPPORT_END)
+        cast(tool, work, credentials[person], choice)
+    try:
+        procedure.vote(registered[0], Choice.ABSTAIN, at=SUPPORT_END)
+    except ProcedureError as exc:
+        check(str(exc) == "DUPLICATE_VOTE", "unexpected duplicate decision")
+    else:
+        raise ValueError("Citizen accepted a repeat vote")
+    procedure.close(at=CLOSE)
+    report = procedure.report()
+    tool(work, "archive", "add-event", "--type", "EndBallots")
+    encrypted = tool(work, "election", "compute-encrypted-tally")
+    tool(work, "archive", "add-event", "--type", "EncryptedTally", data=encrypted)
+    [key] = work.glob("*.privkey")
+    decryption = tool(work, "election", "decrypt", "--privkey", key.name, "--trustee-id", "1")
+    tool(work, "archive", "add-event", "--type", "PartialDecryption", data=decryption)
+    shutil.copyfile(archive, changed / archive.name)
+    result = tool(work, "election", "compute-result")
+    tool(work, "archive", "add-event", "--type", "Result", data=result)
+    shutil.copyfile(archive, final / "election.bel")
+    # The altered archive uses Belenios' own event writer, with valid archive framing.
+    wrong = json.loads(result)
+    wrong["result"][0][0] -= 1
+    wrong["result"][0][1] += 1
+    tool(changed, "archive", "add-event", "--type", "Result", data=json.dumps(wrong, separators=(",", ":")).encode())
+    credentials.clear()
+    shutil.rmtree(work)
     # The private workspace is gone before checking either proposed result.
     tool(changed, "election", "verify", rejects=True)
     shutil.rmtree(changed)
@@ -155,13 +167,24 @@ def bundle(public, target):
         os.link(output.name, target)
 
 
-def run(executable, public_bundle=None):
+def run(executable, public_bundle=None, setup_pin=None):
     tool = Tool(executable)
     with tempfile.TemporaryDirectory() as scratch:
         public = Path(scratch)
         version = tool(public, "--version").decode("ascii").strip()
         check(version.partition(" ")[0] == "3.3.0", "requires Belenios 3.3.0")
-        cases = [scenario(tool, public / name, name, choices) for name, choices in CASES.items()]
+        people = tuple(synthetic_identity(i) for i in range(1, 7))
+        with tempfile.TemporaryDirectory() as private:
+            opened, pin = open_cases(tool, public, Path(private), people)
+            if setup_pin is not None:
+                target = Path(setup_pin)
+                with tempfile.NamedTemporaryFile(dir=target.parent) as output:
+                    output.write((json.dumps(pin, sort_keys=True) + "\n").encode("ascii"))
+                    output.flush()
+                    os.fsync(output.fileno())
+                    os.link(output.name, target)
+            cases = [scenario(tool, public / name, name, choices, people, opened[name])
+                     for name, choices in CASES.items()]
         report = {"schema": "volparossa.citizen.belenios-demo.v1", "mode": "synthetic-offline-exercise",
                   "tool_version": version, "cases": cases, "real_identity_verified": False,
                   "independent_trustee_administration": False, "legal_authority": False}

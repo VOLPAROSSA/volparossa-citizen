@@ -19,7 +19,7 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def verify(executable, bundle):
+def verify(executable, bundle, setup_pin=None):
     matches = shutil.which(executable)
     require(matches, "Belenios executable unavailable")
     tool = str(Path(matches).resolve())
@@ -32,6 +32,13 @@ def verify(executable, bundle):
                                       for stage in ("setup", "final")}
         require(len(z.infolist()) == len(allowed) and set(z.namelist()) == allowed
                 and all(item.file_size <= 1024 * 1024 for item in z.infolist()), "unexpected bundle contents")
+        if setup_pin is not None:
+            with Path(setup_pin).open("rb") as witness:
+                data = witness.read(1025)
+            require(len(data) <= 1024, "unexpected setup pin size")
+            hashes = {case: hashlib.sha256(z.read(f"{case}/setup/election.bel")).hexdigest() for case in EXPECTED}
+            require(json.loads(data) == {"schema": "volparossa.citizen.belenios-setup.v1", "sha256": hashes},
+                    "referendum setup differs from the independently retained pin")
         report = json.loads(z.read("report.json"))
         rows = report["cases"]
         require(report["schema"] == "volparossa.citizen.belenios-demo.v1" and
@@ -76,5 +83,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bundle", type=Path)
     parser.add_argument("--tool", default="belenios-tool")
+    parser.add_argument("--setup-pin", type=Path, help="separately trusted public setup digest file")
     args = parser.parse_args()
-    verify(args.tool, args.bundle)
+    verify(args.tool, args.bundle, args.setup_pin)

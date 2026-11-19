@@ -57,6 +57,37 @@ public replay run as an unprivileged user in a fresh Linux network namespace
 with only the loopback interface. File digests vary between elections because the
 tool generates fresh secrets. [Workflow](../../.github/workflows/belenios-offline.yml).
 
+## Retain an independently authenticated setup
+
+`citizen.py belenios-demo --setup-pin public-setup.json` writes a separate 307-byte
+JSON file containing the SHA-256 digests of all three initial public archives.
+The file is complete before the first ballot and an existing path is preserved.
+The final ZIP contains the ballot proofs and election results. Obtain the setup
+file through a separately trusted channel. Receiving it alongside an untrusted
+ZIP would allow a different complete election to present its own setup.
+
+An owner with an existing VOLPAROSSA identity can sign the setup using the
+ordinary Core CLI. Choose a new cache and manifest path. The identity key is
+encrypted and Core prompts for its passphrase.
+
+```sh
+volparossa content publish --identity /path/to/identity.key --input public-setup.json \
+  --cache public-setup-cache --manifest public-setup.pb --revision 1 \
+  --name citizen-fictional-library-setup --content-type application/json
+```
+
+A reader with the intended manifest, verified cache and independently trusted
+publisher public key can reconstruct the setup and replay the referendum.
+The following commands work offline. For an election with several publications,
+retain the intended manifest digest separately as well.
+
+```sh
+volparossa content assemble --manifest public-setup.pb --publisher-key "$PUBLISHER_KEY" \
+  --cache public-setup-cache --output checked-setup.json
+python3 -B citizen.py belenios-replay public-referenda.zip --setup-pin checked-setup.json \
+  --tool ./belenios-runtime/belenios-tool
+```
+
 ## External software and provenance
 
 Belenios 3.3.0 is the upstream release tagged at commit
