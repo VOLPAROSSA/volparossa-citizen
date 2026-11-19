@@ -291,6 +291,19 @@ def demo():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("demo",))
-    parser.parse_args()
-    print(json.dumps(demo(), indent=2, sort_keys=True))
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("demo", help="run the in-memory fictional procedures")
+    encrypted = commands.add_parser("belenios-demo", help="run the offline encrypted library-hours exercise")
+    encrypted.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
+    encrypted.add_argument("--public-bundle", help="create a new ZIP with public setup and final archives")
+    args = parser.parse_args()
+    if args.command == "demo":
+        result = demo()
+    else:
+        import subprocess
+        from belenios_demo import run
+        try:
+            result = run(args.tool, args.public_bundle)
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            parser.exit(1, f"{error}\n")
+    print(json.dumps(result, indent=2, sort_keys=True))
