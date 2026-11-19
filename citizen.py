@@ -299,8 +299,14 @@ if __name__ == "__main__":
     encrypted.add_argument("--setup-pin", help="write the three public setup digests to a new, separate file before voting")
     replay = commands.add_parser("belenios-replay", help="verify a public exercise against an independently retained setup")
     replay.add_argument("bundle", help="public referendum ZIP")
-    replay.add_argument("--setup-pin", required=True, help="separately trusted setup digest file")
-    replay.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
+    cached = commands.add_parser("belenios-replay-cache", help="verify a signed referendum from existing local Core caches")
+    cached.add_argument("manifest", help="signed Core publication manifest")
+    cached.add_argument("--publisher-key", required=True, help="independently trusted Ed25519 publisher public key")
+    cached.add_argument("--cache", action="append", required=True, help="existing local Core chunk store, repeat for multiple stores")
+    cached.add_argument("--core", default="volparossa", help="installed VOLPAROSSA CLI")
+    for reader in (replay, cached):
+        reader.add_argument("--setup-pin", required=True, help="separately trusted setup digest file")
+        reader.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     args = parser.parse_args()
     if args.command == "demo":
         result = demo()
@@ -312,6 +318,10 @@ if __name__ == "__main__":
             if args.command == "belenios-replay":
                 from integrations.belenios.replay import verify
                 verify(args.tool, args.bundle, args.setup_pin)
+                parser.exit(0)
+            if args.command == "belenios-replay-cache":
+                from integrations.belenios.replay import verify_cached
+                verify_cached(args.core, args.tool, args.manifest, args.publisher_key, args.cache, args.setup_pin)
                 parser.exit(0)
             from belenios_demo import run
             result = run(args.tool, args.public_bundle, args.setup_pin)

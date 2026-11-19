@@ -1,14 +1,40 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from pathlib import Path
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from belenios_demo import bundle
+from integrations.belenios.replay import verify_cached
 
 
 class BeleniosEntryTests(unittest.TestCase):
+    def test_core_receipt_must_bind_the_publisher_and_temp_file_is_removed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pin = root / "setup.json"
+            pin.write_text("{}")
+            key = "42" * 32
+            outputs = []
+
+            def assemble(argv, **_):
+                output = Path(argv[argv.index("--output") + 1])
+                output.write_bytes(b"test")
+                outputs.append(output)
+                return json.dumps({"operation": "offline_content_assemble", "network_retrieval": False,
+                                   "publisher_key_hex": "43" * 32, "bytes": 4, "output": str(output)})
+
+            with patch("integrations.belenios.replay.subprocess.check_output", side_effect=assemble), \
+                 patch("integrations.belenios.replay.verify") as verifier:
+                with self.assertRaisesRegex(ValueError, "publisher-bound"):
+                    verify_cached("core", "belenios", root / "manifest", key, [root], pin)
+                verifier.assert_not_called()
+            self.assertEqual(len(outputs), 1)
+            self.assertFalse(outputs[0].parent.exists())
+
     def test_missing_external_tool_leaves_no_bundle(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "public.zip"
