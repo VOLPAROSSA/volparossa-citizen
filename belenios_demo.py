@@ -34,11 +34,11 @@ class Tool:
         check(path is not None, "Belenios 3.3.0 executable unavailable")
         self.path = str(Path(path).resolve())
 
-    def __call__(self, directory, *args, data=b"", rejects=False):
+    def __call__(self, directory, *args, data=b"", rejects=False, pass_fds=()):
         result = subprocess.run([self.path, *args], cwd=directory, input=data, capture_output=True,
                                 env={"PATH": os.defpath, "HOME": str(directory), "TMPDIR": str(directory),
                                      "BELENIOS_USE_URANDOM": "1", "LC_ALL": "C"},
-                                timeout=30, check=False)
+                                timeout=30, check=False, pass_fds=pass_fds)
         if rejects:
             check(result.returncode > 0 and b"check_result failed" in result.stderr, "altered result was not rejected by the verifier")
         else:
