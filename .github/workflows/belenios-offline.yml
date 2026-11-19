@@ -9,6 +9,7 @@ on:
       - 'citizen.py'
       - 'belenios_demo.py'
       - 'integrations/belenios/**'
+      - 'tests/test_belenios_tally.py'
 
 permissions:
   contents: read
@@ -41,6 +42,7 @@ jobs:
           python3 -B citizen.py belenios-replay "$1/another.zip" --setup-pin "$1/another-setup.json" --tool "$1/belenios/belenios-tool"
           if python3 -B citizen.py belenios-replay "$1/another.zip" --setup-pin "$1/public-setup.json" --tool "$1/belenios/belenios-tool" 2>"$1/mismatched.stderr"; then exit 1; fi
           grep -Fx 'referendum setup differs from the independently retained pin' "$1/mismatched.stderr"
+          BELENIOS_TOOL="$1/belenios/belenios-tool" python3 -B -m unittest discover -s tests -p test_belenios_tally.py
           OFFLINE
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

@@ -135,6 +135,15 @@ class Outcome(str, Enum):
     INDETERMINATE = "indeterminate"
 
 
+
+def referendum_outcome(yes, no, eligible):
+    if 3 * yes >= 2 * eligible:
+        return Outcome.ADOPTED
+    if 3 * no >= 2 * eligible:
+        return Outcome.REJECTED
+    return Outcome.INDETERMINATE
+
+
 class Procedure:
     """Single-process reference workflow, not an authenticated election service."""
     __slots__ = ("_id", "_proposal", "_electorate", "_registration", "_start", "_support_end",
@@ -209,8 +218,7 @@ class Procedure:
         require(now >= self._close, "BALLOT_STILL_OPEN")
         size = len(self._electorate.all_eligible)
         yes, no = self._counts[Choice.YES], self._counts[Choice.NO]
-        self._outcome = (Outcome.ADOPTED if 3 * yes >= 2 * size else
-                         Outcome.REJECTED if 3 * no >= 2 * size else Outcome.INDETERMINATE)
+        self._outcome = referendum_outcome(yes, no, size)
         self._closed_participation = (self._registration.count, len(self._supporters))
         self._supporters.clear()
         self._voters.clear()
@@ -307,6 +315,12 @@ if __name__ == "__main__":
     for reader in (replay, cached):
         reader.add_argument("--setup-pin", required=True, help="separately trusted setup digest file")
         reader.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
+    single = commands.add_parser("belenios-tally", help="verify a closed Yes/No/Abstain referendum")
+    single.add_argument("setup", help="public initial Belenios archive")
+    single.add_argument("final", help="public closed Belenios archive")
+    single.add_argument("--setup-sha256", required=True, help="independently retained initial archive digest")
+    single.add_argument("--eligible", type=int, required=True, help="independently established full eligible population")
+    single.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     args = parser.parse_args()
     if args.command == "demo":
         result = demo()
@@ -323,8 +337,12 @@ if __name__ == "__main__":
                 from integrations.belenios.replay import verify_cached
                 verify_cached(args.core, args.tool, args.manifest, args.publisher_key, args.cache, args.setup_pin)
                 parser.exit(0)
-            from belenios_demo import run
-            result = run(args.tool, args.public_bundle, args.setup_pin)
+            if args.command == "belenios-tally":
+                from integrations.belenios.tally import tally
+                result = tally(args.tool, args.setup, args.final, args.setup_sha256, args.eligible)
+            else:
+                from belenios_demo import run
+                result = run(args.tool, args.public_bundle, args.setup_pin)
         except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile, tarfile.TarError, subprocess.SubprocessError) as error:
             parser.exit(1, f"{error}\n")
     print(json.dumps(result, indent=2, sort_keys=True))
