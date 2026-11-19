@@ -17,8 +17,8 @@ own election identifier, a credential authority and a single decryption trustee.
 
 Belenios checks the ballots, tallies their ciphertexts and checks the trustee's
 decryption proof against the published result. For each election the generator
-also uses Belenios' event writer to publish an altered result with an extra yes
-vote. The native verifier must reject it specifically during result verification.
+also uses Belenios' event writer to move one yes vote to no in the published result.
+The altered total is internally plausible and preserves turnout. The native verifier must reject it specifically during result verification.
 Only the original accepted archives enter the bundle.
 
 The separate replay command takes the public ZIP and the original external tool.

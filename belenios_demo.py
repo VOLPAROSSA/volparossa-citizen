@@ -118,7 +118,8 @@ def scenario(tool, public, name, choices):
         shutil.copyfile(archive, final / "election.bel")
         # The altered archive uses Belenios' own event writer, with valid archive framing.
         wrong = json.loads(result)
-        wrong["result"][0][0] += 1
+        wrong["result"][0][0] -= 1
+        wrong["result"][0][1] += 1
         tool(changed, "archive", "add-event", "--type", "Result", data=json.dumps(wrong, separators=(",", ":")).encode())
         del credentials
     # The private workspace is gone before checking either proposed result.
