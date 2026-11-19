@@ -306,6 +306,8 @@ if __name__ == "__main__":
         result = demo()
     else:
         import subprocess
+        import tarfile
+        import zipfile
         try:
             if args.command == "belenios-replay":
                 from integrations.belenios.replay import verify
@@ -313,6 +315,6 @@ if __name__ == "__main__":
                 parser.exit(0)
             from belenios_demo import run
             result = run(args.tool, args.public_bundle, args.setup_pin)
-        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile, tarfile.TarError, subprocess.SubprocessError) as error:
             parser.exit(1, f"{error}\n")
     print(json.dumps(result, indent=2, sort_keys=True))

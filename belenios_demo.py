@@ -76,35 +76,36 @@ def cast(tool, work, credential, choice):
     tool(work, "archive", "add-event", "--type", "Ballot", data=ballot)
 
 
-def open_cases(tool, public, private, registered):
+def open_cases(tool, public, private, people):
+    registered = people[:5]
     opened = {}
     hashes = {}
     for name in CASES:
         work = private / name
         work.mkdir(mode=0o700)
+        procedure = Procedure("sim-" + name, Proposal("sim-library-hours", 1, "sim-town"),
+                              Electorate("sim-town-roll", "sim-town", START, people), Registration(registered),
+                              starts_at=START, support_until=SUPPORT_END, closes_at=CLOSE)
+        procedure.support(people[0], at=START)
+        check(procedure.state == "collecting_support", "one supporter opened a six-person referendum")
+        procedure.support(people[1], at=START)
+        check(procedure.state == "referendum", "required support did not open the referendum")
         archive, credentials = setup(tool, work, registered)
         initial = public / name / "setup" / "election.bel"
         initial.parent.mkdir(parents=True)
         shutil.copyfile(archive, initial)
         hashes[name] = hashlib.sha256(initial.read_bytes()).hexdigest()
-        opened[name] = (work, archive, credentials)
+        opened[name] = (procedure, work, archive, credentials)
     return opened, {"schema": "volparossa.citizen.belenios-setup.v1", "sha256": hashes}
 
 
 def scenario(tool, public, name, choices, people, opened):
     registered = people[:5]
-    procedure = Procedure("sim-" + name, Proposal("sim-library-hours", 1, "sim-town"),
-                          Electorate("sim-town-roll", "sim-town", START, people), Registration(registered),
-                          starts_at=START, support_until=SUPPORT_END, closes_at=CLOSE)
-    procedure.support(people[0], at=START)
-    check(procedure.state == "collecting_support", "one supporter opened a six-person referendum")
-    procedure.support(people[1], at=START)
-    check(procedure.state == "referendum", "required support did not open the referendum")
     initial, final = public / "setup", public / "final"
     final.mkdir()
     changed = public / "altered"
     changed.mkdir()
-    work, archive, credentials = opened
+    procedure, work, archive, credentials = opened
     for person, choice in zip(registered, choices):
         procedure.vote(person, choice, at=SUPPORT_END)
         cast(tool, work, credentials[person], choice)
@@ -174,7 +175,7 @@ def run(executable, public_bundle=None, setup_pin=None):
         check(version.partition(" ")[0] == "3.3.0", "requires Belenios 3.3.0")
         people = tuple(synthetic_identity(i) for i in range(1, 7))
         with tempfile.TemporaryDirectory() as private:
-            opened, pin = open_cases(tool, public, Path(private), people[:5])
+            opened, pin = open_cases(tool, public, Path(private), people)
             if setup_pin is not None:
                 target = Path(setup_pin)
                 with tempfile.NamedTemporaryFile(dir=target.parent) as output:
