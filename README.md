@@ -65,6 +65,24 @@ and trustee keys. A reader checks the intended elections with the following comm
 python3 -B citizen.py belenios-replay public-referenda.zip --setup-pin public-setup.json --tool ./belenios-runtime/belenios-tool
 ```
 
+For a single public Belenios 3.3.0 referendum, supply its original setup archive,
+its closed archive, the setup digest retained independently before voting, and
+the separately established eligible population. The command verifies the
+ballots, decryption and result, reads the question from the pinned setup, and
+applies the same two-thirds rule used in the Citizen procedure. It supports one
+Ed25519 Yes/No/Abstain question with one unweighted credential per registered
+participant. The result lists abstentions and separately counts eligible people who cast
+no ballot.
+
+```sh
+python3 -B citizen.py belenios-tally initial.bel closed.bel \
+  --setup-sha256 "$TRUSTED_SETUP_SHA256" --eligible 101 --tool ./belenios-runtime/belenios-tool
+```
+
+The caller supplies the eligible population. The public archive establishes the
+credential and ballot counts. Determining which people are legally eligible
+requires a separate registration process.
+
 To read a published referendum from local Core storage, use its signed manifest,
 the publisher public key you trust and the existing cache containing its chunks.
 Citizen asks the Core CLI to reconstruct the ZIP in a temporary directory, checks
