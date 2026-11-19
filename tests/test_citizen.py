@@ -165,6 +165,28 @@ class CitizenSimulation(unittest.TestCase):
         self.assertFalse(procedure.can_resubmit(at=REPEAT))
         self.assertEqual(procedure.state, "referendum")
 
+    def test_closed_tally_survives_later_registrations_and_an_explicit_repeat(self):
+        first, registry, people = make(3)
+        open_ballot(first, people)
+        first.vote(people[0], Choice.YES, at=SUPPORT_END)
+        first.vote(people[1], Choice.ABSTAIN, at=SUPPORT_END)
+        first.close(at=CLOSE)
+        closed = first.report()
+        self.assertEqual((closed["support"], closed["yes"], closed["abstain"], closed["not_voted"]),
+                         (1, 1, 1, 1))
+        self.assertFalse(first._supporters)
+        self.assertFalse(first._voters)
+        newcomer = synthetic_identity(4)
+        registry.register(newcomer)
+        self.assertEqual(first.report(), closed)
+        successor = first.resubmit("sim-successor",
+            Electorate("sim-new-roll", "sim-town", REPEAT, [newcomer]), at=REPEAT,
+            support_until="2029-04-01T00:00:00Z", closes_at="2029-05-01T00:00:00Z")
+        successor.support(newcomer, at=REPEAT)
+        successor.vote(newcomer, Choice.NO, at=REPEAT)
+        self.assertEqual(successor.report()["registered_accounts"], 4)
+        self.assertEqual(first.report(), dict(closed, successor="sim-successor"))
+
     def test_repeat_after_three_calendar_years_requires_explicit_action(self):
         procedure = tally(101, 67, 34)
         before = procedure.report()

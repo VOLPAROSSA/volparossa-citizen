@@ -31,7 +31,10 @@ The deterministic demo emits JSON for adoption, rejection, an indeterminate resu
 and an explicitly requested repeat procedure. It uses 101 eligible fictional
 residents and 102 registered accounts, including an ineligible child record.
 It opens no sockets, reads no identity documents and writes no application data.
-Ballots exist in plain text in process memory: this is deliberately not secret voting.
+Each vote updates the aggregate counts for yes, no and abstain. A separate set of
+participants prevents duplicate votes. At closure, the simulator keeps the counts
+and drops its supporter and voter lists. The caller can still observe choices as
+they are cast. A cryptographic secret ballot remains future work.
 
 ## Implemented rules
 
@@ -62,7 +65,8 @@ The model has no public operation for replacing an active electorate or proposal
 
 An indeterminate procedure becomes eligible for an explicit repeat request after
 three calendar years. Checking eligibility does not open a ballot or schedule work.
-The old electorate and result remain unchanged; a new procedure starts with a
+A closed report retains the account and support counts seen at closing. Later
+registrations are available to a new procedure. Each repeat starts with a
 newly fixed electorate and empty support and ballots.
 
 ## Explicit procedural assumptions

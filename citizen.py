@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """Deterministic, in-memory Citizen procedure simulation. No real identities."""
+from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
@@ -105,6 +106,10 @@ class Electorate:
         require(len(copied) > 0, "EMPTY_ELECTORATE")
         object.__setattr__(self, "all_eligible", copied)
 
+    def contains(self, person):
+        index = bisect_left(self.all_eligible, person)
+        return index < len(self.all_eligible) and self.all_eligible[index] == person
+
 
 @dataclass(frozen=True)
 class Proposal:
@@ -133,7 +138,8 @@ class Outcome(str, Enum):
 class Procedure:
     """Single-process reference workflow, not an authenticated election service."""
     __slots__ = ("_id", "_proposal", "_electorate", "_registration", "_start", "_support_end",
-                 "_close", "_last", "_supporters", "_votes", "_opened", "_outcome", "_successor")
+                 "_close", "_last", "_supporters", "_voters", "_counts", "_closed_participation",
+                 "_opened", "_outcome", "_successor")
 
     def __init__(self, procedure_id, proposal, electorate, registration, *, starts_at,
                  support_until, closes_at):
@@ -146,7 +152,9 @@ class Procedure:
         anniversary(close)  # Refuse an unrepresentable repeat boundary at creation.
         self._proposal, self._electorate, self._registration = proposal, electorate, registration
         self._start, self._support_end, self._close, self._last = start, support_end, close, start
-        self._supporters, self._votes = set(), {}
+        self._supporters, self._voters = set(), set()
+        self._counts = {choice: 0 for choice in Choice}
+        self._closed_participation = None
         self._opened = self._outcome = self._successor = None
 
     @property
@@ -170,7 +178,7 @@ class Procedure:
 
     def _participant(self, person):
         identity(person)
-        require(person in self._electorate.all_eligible, "NOT_ELIGIBLE")
+        require(self._electorate.contains(person), "NOT_ELIGIBLE")
         require(self._registration.contains(person), "NOT_REGISTERED")
 
     def support(self, person, *, at):
@@ -190,8 +198,9 @@ class Procedure:
         require(self._opened <= now < self._close, "BALLOT_WINDOW_CLOSED")
         self._participant(person)
         require(type(choice) is Choice, "CHOICE_INVALID")
-        require(person not in self._votes, "DUPLICATE_VOTE")
-        self._votes[person] = choice
+        require(person not in self._voters, "DUPLICATE_VOTE")
+        self._voters.add(person)
+        self._counts[choice] += 1
         self._last = now
 
     def close(self, *, at):
@@ -199,9 +208,12 @@ class Procedure:
         require(self.state == "referendum", "REFERENDUM_NOT_OPEN")
         require(now >= self._close, "BALLOT_STILL_OPEN")
         size = len(self._electorate.all_eligible)
-        yes, no = self._counts()[Choice.YES], self._counts()[Choice.NO]
+        yes, no = self._counts[Choice.YES], self._counts[Choice.NO]
         self._outcome = (Outcome.ADOPTED if 3 * yes >= 2 * size else
                          Outcome.REJECTED if 3 * no >= 2 * size else Outcome.INDETERMINATE)
+        self._closed_participation = (self._registration.count, len(self._supporters))
+        self._supporters.clear()
+        self._voters.clear()
         self._last = now
         return self._outcome
 
@@ -224,21 +236,20 @@ class Procedure:
         self._last = utc(at)
         return successor
 
-    def _counts(self):
-        return {choice: sum(vote is choice for vote in self._votes.values()) for choice in Choice}
-
     def report(self):
-        counts = self._counts()
+        accounts, support = (self._closed_participation if self._closed_participation is not None
+                             else (self._registration.count, len(self._supporters)))
+        counts = self._counts
         size = len(self._electorate.all_eligible)
         return {
             "schema": "volparossa.citizen.simulation.v1", "mode": "synthetic-simulation",
             "procedure_id": self._id, "proposal_id": self._proposal.proposal_id,
             "proposal_revision": self._proposal.revision,
             "jurisdiction": self._electorate.jurisdiction, "snapshot_id": self._electorate.snapshot_id,
-            "electorate": size, "registered_accounts": self._registration.count,
+            "electorate": size, "registered_accounts": accounts,
             "support_required": (size + 2) // 3, "decision_required": (2 * size + 2) // 3,
-            "support": len(self._supporters), "yes": counts[Choice.YES], "no": counts[Choice.NO],
-            "abstain": counts[Choice.ABSTAIN], "not_voted": size - len(self._votes),
+            "support": support, "yes": counts[Choice.YES], "no": counts[Choice.NO],
+            "abstain": counts[Choice.ABSTAIN], "not_voted": size - sum(counts.values()),
             "state": self.state, "outcome": self._outcome.value if self._outcome else None,
             "closes_at": timestamp(self._close),
             "resubmission_not_before": timestamp(anniversary(self._close))
