@@ -34,7 +34,31 @@ It opens no sockets, reads no identity documents and writes no application data.
 Each vote updates the aggregate counts for yes, no and abstain. A separate set of
 participants prevents duplicate votes. At closure, the simulator keeps the counts
 and drops its supporter and voter lists. The caller can still observe choices as
-they are cast. A cryptographic secret ballot remains future work.
+they are cast.
+
+## Verify an encrypted fictional referendum
+
+An optional command runs the original Belenios 3.3.0 executable on three fictional
+library-hours referenda. Each has six eligible residents, five registered accounts
+and two supporters. Four yes votes adopt, four no votes reject, and three yes with
+one abstention leave the proposal indeterminate. Belenios verifies the encrypted
+ballots, the trustee's decryption and the published aggregate. Citizen applies
+the thresholds against all six residents.
+
+On Linux x86-64, Python and `dpkg-deb` can prepare the pinned Debian executable
+and libraries in a **new** directory. Only the preparation step downloads files.
+The other commands can run with the network disconnected.
+
+```sh
+python3 -B integrations/belenios/prepare.py ./belenios-runtime
+python3 -B citizen.py belenios-demo --tool ./belenios-runtime/belenios-tool --public-bundle public-referenda.zip
+python3 -B integrations/belenios/replay.py public-referenda.zip --tool ./belenios-runtime/belenios-tool
+```
+
+The ZIP contains the initial and final public Belenios archives and a Citizen
+report. A reader can replay the proofs after all fictional private credentials and
+trustee keys have been discarded. The exercise uses one operator for registration,
+ballot generation and trusteeship. [Protocol, source and verification scope](integrations/belenios/README.md).
 
 ## Implemented rules
 
@@ -96,6 +120,7 @@ governance rules:
 - [x] Frozen all-eligible denominator separate from accounts and turnout.
 - [x] Targeted tests for thresholds, duplicate inputs, time boundaries, registration,
   snapshot immutability, calendar anniversaries and actual demo execution.
+- [x] Offline Belenios archive verification and altered-result rejection for three synthetic referenda.
 - [ ] Inclusive real-world registration and independently verified register coverage.
 - [ ] Secret ballots, audited eligibility proofs and independent cryptographic tally verification.
 - [ ] Proposal review using the values framework, contestable jurisdiction and appeals.
@@ -111,7 +136,7 @@ application-specific participation rules.
 
 ## Open source building blocks
 
-These candidates are research inputs, not dependencies or adopted protocols:
+Citizen is evaluating the following projects for its application-specific workflows.
 
 - [Decidim](https://docs.decidim.org/en/develop/features/general-description.html)
   separates participation spaces and components such as proposals and meetings.
@@ -119,12 +144,9 @@ These candidates are research inputs, not dependencies or adopted protocols:
 - [AnonCreds Rust](https://github.com/anoncreds/anoncreds-rs) implements anonymous
   credential handling. It is a candidate for a later credential adapter; issuance
   trust and complete electorate coverage remain separate problems.
-- [Belenios](https://www.belenios.org/faq.html) offers verifiable voting with separate
-  authorities, but documents coercion and compromised-device limitations. A later
-  synthetic-ballot integration must validate its actual proofs and reconcile its
-  revoting rules with Citizen's chosen procedure.
+- Belenios supplies the optional external cryptographic verifier for the fictional
+  library-hours exercise. The project documents the assumptions around voting
+  devices, coercion and the roles of its authorities. [Belenios FAQ](https://www.belenios.net/faq.html).
 
-Select and pin an audited upstream version before importing code, retain its license
-and notices, and test its trust assumptions. This simulation invents no cryptography
-and imports none of those implementations. Original source here uses GPL-3.0-only;
-the repository's existing [license](LICENSE) is unchanged.
+Original Citizen source uses GPL-3.0-only. The external tools retain their source
+licenses and notices. [Citizen license](LICENSE).

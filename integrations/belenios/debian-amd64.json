@@ -1,0 +1,37 @@
+[
+  {
+    "path": "pool/main/b/belenios/belenios-tool_3.3.0+dfsg-1_amd64.deb",
+    "sha256": "4f3039402c7b4669adbca0b8be452ab8af82e5851eb51f6673920942df60b37e",
+    "size": 2938576
+  },
+  {
+    "path": "pool/main/g/glibc/libc6_2.43-7_amd64.deb",
+    "sha256": "5c71715c51103beb4fbba9fe9f8dff604af6610dfa71c70bff342f54a7860803",
+    "size": 1866392
+  },
+  {
+    "path": "pool/main/libe/libev/libev4t64_4.33-3_amd64.deb",
+    "sha256": "686886fc6f37ce42e6cf2fa6ed929f8bf689b46bb53129ec4ab6431bac799d1f",
+    "size": 43380
+  },
+  {
+    "path": "pool/main/g/gmp/libgmp10_6.3.0+dfsg-5+b2_amd64.deb",
+    "sha256": "032743c787f0e1e644e4dcfbdb38f01be8cb150cb9633f8be5e79aba6938f349",
+    "size": 559860
+  },
+  {
+    "path": "pool/main/libs/libsodium/libsodium26_1.0.22-2_amd64.deb",
+    "sha256": "18d593b1aaab48f126bd3636f009fc5294f948c4960c171b7e73eab9f814f198",
+    "size": 210200
+  },
+  {
+    "path": "pool/main/o/openssl/libssl3t64_3.6.5-1_amd64.deb",
+    "sha256": "0a0ec84fe860c5c93c74d53cbb071aea0793327a3761b483080e9d7b73c21b37",
+    "size": 2620984
+  },
+  {
+    "path": "pool/main/z/zlib/zlib1g_1.3.dfsg+really1.3.2-4_amd64.deb",
+    "sha256": "8506ce550a81ac14b047608e0df121037d9cbb10c3cc28446f68cf8c1d9d31ce",
+    "size": 92424
+  }
+]
