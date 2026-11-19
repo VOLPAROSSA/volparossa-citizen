@@ -65,6 +65,22 @@ and trustee keys. A reader checks the intended elections with the following comm
 python3 -B citizen.py belenios-replay public-referenda.zip --setup-pin public-setup.json --tool ./belenios-runtime/belenios-tool
 ```
 
+A fictional voter on Linux can prepare an encrypted ballot on their own machine.
+Use the initial archive and the digest obtained independently before the vote.
+Read the question shown in the terminal, then enter the choice and the voter's
+private Belenios credential at the hidden prompts.
+
+```sh
+python3 -B citizen.py belenios-ballot initial.bel --setup-sha256 "$TRUSTED_SETUP_SHA256" \
+  --output encrypted-ballot.json --tool ./belenios-runtime/belenios-tool
+```
+
+Submit the encrypted JSON to the election operator and keep the returned
+`ballot_sha256` tracker. The command works offline. A verified ballot file
+still needs to reach the operator before voting closes. After closure, add
+`--ballot-sha256 "$TRACKER"` to the tally command below. Its
+`ballot_included` field reports whether the verified count contains that ballot.
+
 For a single public Belenios 3.3.0 referendum, supply its original setup archive,
 its closed archive, the setup digest retained independently before voting, and
 the separately established eligible population. The command verifies the
