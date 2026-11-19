@@ -40,21 +40,38 @@ class IndependentVoter(unittest.TestCase):
                 # Only public program files, the pinned tool and the voter directory enter.
                 code = Path(demo.__file__).parent
                 wrapper = ["sudo", "-n", "bwrap"] if isolation == "sudo" else ["bwrap"]
-                voter_cli = wrapper + ["--unshare-net", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
-                    "--die-with-parent", "--uid", str(os.getuid()), "--gid", str(os.getgid()), "--cap-drop", "ALL",
+                caps = ["--cap-drop", "ALL"]
+                drop = []
+                if isolation == "sudo":
+                    # Privileged bwrap sets up the mounts. Drop to the real voter before opening any inputs.
+                    for cap in ("CAP_SETUID", "CAP_SETGID", "CAP_SETPCAP"):
+                        caps += ["--cap-add", cap]
+                    drop = ["/usr/bin/setpriv", "--reuid", str(os.getuid()), "--regid", str(os.getgid()),
+                            "--clear-groups", "--inh-caps=-all", "--ambient-caps=-all", "--bounding-set=-all",
+                            "--no-new-privs", "--"]
+                sandbox = wrapper + ["--unshare-net", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
+                    "--die-with-parent", *caps,
                     "--ro-bind", "/usr", "/usr", "--symlink", "usr/lib", "/lib", "--symlink", "usr/lib64", "/lib64",
                     "--symlink", "usr/bin", "/bin", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp",
                     "--ro-bind", str(code / "citizen.py"), "/app/citizen.py",
                     "--ro-bind", str(code / "belenios_demo.py"), "/app/belenios_demo.py",
                     "--ro-bind", str(code / "integrations"), "/app/integrations",
                     "--ro-bind", str(Path(tool.path).parent), "/runtime",
-                    "--bind", str(voter), "/voter", "--chdir", "/voter", "--", "/usr/bin/python3", "-B", "/app/citizen.py"]
+                    "--bind", str(voter), "/voter", "--chdir", "/voter", "--", *drop, "/usr/bin/python3", "-B"]
+                subprocess.run(sandbox + ["-c", "import os, sys; assert os.geteuid() == int(sys.argv[1]) != 0; "
+                    "assert not os.path.exists(sys.argv[2]); assert len(os.listdir('/tmp')) == 0; "
+                    "assert len(open('/proc/net/dev').read().splitlines()) == 3", str(os.getuid()), str(authority)],
+                    check=True, timeout=15)
+                voter_cli = sandbox + ["/app/citizen.py"]
                 voter_setup, voter_tool = "/voter/initial.bel", "/runtime/belenios-tool"
 
             def prepare(person, choice, credential, sha=pin, terminal=False):
                 cmd = voter_cli + ["belenios-ballot", voter_setup, "--setup-sha256", sha,
                              "--output", person, "--tool", voter_tool]
                 if terminal:
+                    # The terminal belongs directly to the voter process, including on sudo configurations
+                    # that allocate another pseudoterminal for a privileged mount helper.
+                    cmd = cli + ["belenios-ballot", str(initial), "--setup-sha256", sha, "--output", person, "--tool", tool.path]
                     master, slave = pty.openpty()
                     try:
                         with subprocess.Popen(cmd, cwd=voter, stdin=slave, stderr=slave, stdout=subprocess.PIPE,
@@ -83,16 +100,20 @@ class IndependentVoter(unittest.TestCase):
 
             wrong_setup = prepare("substituted", "yes", credentials[people[0]], "0" * 64)
             self.assertNotEqual(wrong_setup.returncode, 0)
+            self.assertIn("initial archive differs", wrong_setup.stderr)
             self.assertNotIn("Private Belenios credential", wrong_setup.stderr)
             invalid = prepare("unregistered", "yes", unrelated[people[0]])
             self.assertNotEqual(invalid.returncode, 0)
+            self.assertIn("Belenios operation failed", invalid.stderr)
             self.assertNotIn(unrelated[people[0]], invalid.stderr + invalid.stdout)
             self.assertFalse((voter / "unregistered").exists())
             self.assertFalse((voter / "substituted").exists())
 
+            interactive = prepare("terminal-ballot", "abstain", credentials[people[0]], terminal=True)
+            self.assertEqual(interactive.returncode, 0, interactive.stderr)
             receipts = []
             for person, choice in zip(people, ("no", "abstain", "yes", "no")):
-                result = prepare(person, choice, credentials[person], terminal=person == people[0])
+                result = prepare(person, choice, credentials[person])
                 self.assertEqual(result.returncode, 0, result.stderr)
                 receipt = json.loads(result.stdout)
                 self.assertIn(demo.QUESTION["question"], result.stderr)
