@@ -117,6 +117,22 @@ report. A reader can replay the proofs after all fictional private credentials a
 trustee keys have been discarded. The exercise uses one operator for registration,
 ballot generation and trusteeship. [Protocol, source and verification scope](integrations/belenios/README.md).
 
+### Offline voter trial
+
+On 24 November 2026, four fictional voters prepared encrypted ballots with
+Belenios 3.3.0 in an offline Linux sandbox with no access to the authority's
+files. The operator submitted three. After the authority directory was removed,
+Citizen verified one Yes, one No and one Abstain, found the three submitted
+trackers and reported the fourth absent. The runner tested PR head `a2c4f005`
+against `7007a829`. The tested tree matches merged revision `1c8e6fc3`.
+[Native test and run log](https://github.com/VOLPAROSSA/volparossa-citizen/actions/runs/45408384173/job/138495180143)
+· [Merged source](https://github.com/VOLPAROSSA/volparossa-citizen/commit/1c8e6fc32702aac666d0730fc48feabca0ae79a6).
+
+The same run published the three library-hours demonstration archives and
+their separate public setup digests for replay.
+[Public referendum bundle](https://github.com/VOLPAROSSA/volparossa-citizen/actions/runs/45408384173/artifacts/14927331791)
+· [Public setup digests](https://github.com/VOLPAROSSA/volparossa-citizen/actions/runs/45408384173/artifacts/14926588801).
+
 ## Implemented rules
 
 An immutable, declared-complete synthetic electorate fixes `N` before support
