@@ -53,6 +53,8 @@ class IndependentVoter(unittest.TestCase):
                     "--die-with-parent", *caps,
                     "--ro-bind", "/usr", "/usr", "--symlink", "usr/lib", "/lib", "--symlink", "usr/lib64", "/lib64",
                     "--symlink", "usr/bin", "/bin", "--dev", "/dev", "--proc", "/proc", "--perms", "01777", "--tmpfs", "/tmp",
+                    # bwrap can give an implicit mount parent mode 0700, owned by the mount helper.
+                    "--perms", "0755", "--dir", "/app",
                     "--ro-bind", str(code / "citizen.py"), "/app/citizen.py",
                     "--ro-bind", str(code / "belenios_demo.py"), "/app/belenios_demo.py",
                     "--ro-bind", str(code / "integrations"), "/app/integrations",
