@@ -315,10 +315,16 @@ if __name__ == "__main__":
     for reader in (replay, cached):
         reader.add_argument("--setup-pin", required=True, help="separately trusted setup digest file")
         reader.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
+    ballot = commands.add_parser("belenios-ballot", help="prepare and verify a private choice for an offline fictional referendum")
+    ballot.add_argument("setup", help="public initial Belenios archive")
+    ballot.add_argument("--setup-sha256", required=True, help="independently retained initial archive digest")
+    ballot.add_argument("--output", required=True, help="new file for the encrypted ballot")
+    ballot.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     single = commands.add_parser("belenios-tally", help="verify a closed Yes/No/Abstain referendum")
     single.add_argument("setup", help="public initial Belenios archive")
     single.add_argument("final", help="public closed Belenios archive")
     single.add_argument("--setup-sha256", required=True, help="independently retained initial archive digest")
+    single.add_argument("--ballot-sha256", help="look for this voter’s tracker in the verified final count")
     single.add_argument("--eligible", type=int, required=True, help="independently established full eligible population")
     single.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     args = parser.parse_args()
@@ -337,9 +343,12 @@ if __name__ == "__main__":
                 from integrations.belenios.replay import verify_cached
                 verify_cached(args.core, args.tool, args.manifest, args.publisher_key, args.cache, args.setup_pin)
                 parser.exit(0)
-            if args.command == "belenios-tally":
+            if args.command == "belenios-ballot":
+                from integrations.belenios.ballot import prepare_ballot
+                result = prepare_ballot(args.tool, args.setup, args.setup_sha256, args.output)
+            elif args.command == "belenios-tally":
                 from integrations.belenios.tally import tally
-                result = tally(args.tool, args.setup, args.final, args.setup_sha256, args.eligible)
+                result = tally(args.tool, args.setup, args.final, args.setup_sha256, args.eligible, args.ballot_sha256)
             else:
                 from belenios_demo import run
                 result = run(args.tool, args.public_bundle, args.setup_pin)
