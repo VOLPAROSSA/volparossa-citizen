@@ -95,8 +95,12 @@ python3 -B citizen.py belenios-tally initial.bel closed.bel \
   --setup-sha256 "$TRUSTED_SETUP_SHA256" --eligible 101 --tool ./belenios-runtime/belenios-tool
 ```
 
-The caller supplies the eligible population. The public archive establishes the
-credential and ballot counts. Determining which people are legally eligible
+New fictional Citizen elections record the electorate size, jurisdiction,
+register identifier and reference date in the public Belenios setup before the
+first ballot. With an independently retained setup digest, the tally reader
+uses that opening declaration. It rejects a conflicting `--eligible` argument.
+Older setups require the caller's independently established population. The
+public archive establishes credential and ballot counts. Legal eligibility
 requires a separate registration process.
 
 To read a published referendum from local Core storage, use its signed manifest,

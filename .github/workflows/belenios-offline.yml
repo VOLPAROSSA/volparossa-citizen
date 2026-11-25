@@ -40,6 +40,18 @@ jobs:
           python3 -B citizen.py belenios-demo --tool "$1/belenios/belenios-tool" --public-bundle "$1/public-referenda.zip" --setup-pin "$1/public-setup.json"
           python3 -B integrations/belenios/replay.py "$1/public-referenda.zip" --tool "$1/belenios/belenios-tool"
           python3 -B citizen.py belenios-replay "$1/public-referenda.zip" --setup-pin "$1/public-setup.json" --tool "$1/belenios/belenios-tool"
+          unzip -p "$1/public-referenda.zip" adopted/setup/election.bel > "$1/opening.bel"
+          unzip -p "$1/public-referenda.zip" adopted/final/election.bel > "$1/closed.bel"
+          pin=$(jq -er '.sha256.adopted' "$1/public-setup.json")
+          reader=(python3 -B citizen.py belenios-tally "$1/opening.bel" "$1/closed.bel"
+                  --setup-sha256 "$pin" --tool "$1/belenios/belenios-tool")
+          "${reader[@]}" > "$1/opening-tally.json"
+          jq -e '.opening_electorate == {eligible:6,jurisdiction:"sim-town",reference_at:"2026-01-01T00:00:00Z",snapshot_id:"sim-town-roll"}
+                 and .public_credentials == 5 and .verified_ballots == 5 and .yes == 4 and .not_voted == 1
+                 and .decision_required == 4 and .outcome == "adopted"' "$1/opening-tally.json" >/dev/null
+          if "${reader[@]}" --eligible 7 >"$1/rejected.out" 2>"$1/rejected.err"; then exit 1; fi
+          test ! -s "$1/rejected.out"
+          grep -Fx 'eligible population differs from the pinned opening' "$1/rejected.err"
           python3 -B citizen.py belenios-demo --tool "$1/belenios/belenios-tool" --public-bundle "$1/another.zip" --setup-pin "$1/another-setup.json" >/dev/null
           python3 -B citizen.py belenios-replay "$1/another.zip" --setup-pin "$1/another-setup.json" --tool "$1/belenios/belenios-tool"
           if python3 -B citizen.py belenios-replay "$1/another.zip" --setup-pin "$1/public-setup.json" --tool "$1/belenios/belenios-tool" 2>"$1/mismatched.stderr"; then exit 1; fi
@@ -56,4 +68,9 @@ jobs:
         with:
           name: synthetic-referendum-public-setup
           path: ${{ runner.temp }}/public-setup.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: public-opening-tally
+          path: ${{ runner.temp }}/opening-tally.json
           if-no-files-found: error
