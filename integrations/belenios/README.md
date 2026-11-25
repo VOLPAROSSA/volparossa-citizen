@@ -66,6 +66,19 @@ The final ZIP contains the ballot proofs and election results. Obtain the setup
 file through a separately trusted channel. Receiving it alongside an untrusted
 ZIP would allow a different complete election to present its own setup.
 
+On Citizen `f28c7988`, the independently pinned opening of each fictional
+referendum included six eligible residents in `sim-town-roll` at
+`2026-01-01T00:00:00Z`. Five credentials were issued. The adoption case had four
+yes ballots, one abstention and one eligible resident who did not vote. The
+ordinary tally reader used the opening to set the threshold at four and refused
+an override of seven eligible residents after closing. Each archived opening
+digest matches the corresponding initial Belenios file. The exercise operates
+with a declared fictional population.
+[Original public Belenios archives](../../docs/evidence/citizen-45520183577-referenda.zip) ·
+[Original opening pins](../../docs/evidence/citizen-45520183577-setup.zip) ·
+[Original verified count](../../docs/evidence/citizen-45520183577-tally.zip) ·
+[Hosted native trial](https://github.com/VOLPAROSSA/volparossa-citizen/actions/runs/45520183577)
+
 An owner with an existing VOLPAROSSA identity can sign the setup using the
 ordinary Core CLI. Choose a new cache and manifest path. The identity key is
 encrypted and Core prompts for its passphrase.
