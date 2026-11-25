@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 from zipfile import ZipFile, ZIP_DEFLATED
 
+from integrations.belenios.electorate import opening_description
 from citizen import Choice, Electorate, Procedure, ProcedureError, Proposal, Registration, synthetic_identity
 
 START = "2026-01-01T00:00:00Z"
@@ -46,13 +47,17 @@ class Tool:
         return result.stdout
 
 
-def setup(tool, work, people):
+def setup(tool, work, people, *, electorate=None):
     uid = tool(work, "setup", "generate-token").decode("ascii").strip()
     check(uid.isalnum() and 10 <= len(uid) <= 64, "invalid Belenios election identifier")
     options = ("--uuid", uid, "--group", "Ed25519")
     (work / "voters").write_text("\n".join(people) + "\n")
-    (work / "template").write_text(json.dumps({"name": "sim-library-hours", "description":
-        "Fictional Citizen referendum, revision 1.", "questions": [QUESTION]}))
+    description = "Fictional Citizen referendum, revision 1."
+    if electorate is not None:
+        check(all(electorate.contains(person) for person in people), "credential holder outside opening electorate")
+        description = opening_description(description, electorate)
+    (work / "template").write_text(json.dumps({"name": "sim-library-hours", "description": description,
+                                               "questions": [QUESTION]}))
     tool(work, "setup", "generate-credentials", *options, "--file", "voters")
     [private] = work.glob("*.privcreds")
     credentials = json.loads(private.read_bytes())
@@ -83,14 +88,15 @@ def open_cases(tool, public, private, people):
     for name in CASES:
         work = private / name
         work.mkdir(mode=0o700)
+        electorate = Electorate("sim-town-roll", "sim-town", START, people)
         procedure = Procedure("sim-" + name, Proposal("sim-library-hours", 1, "sim-town"),
-                              Electorate("sim-town-roll", "sim-town", START, people), Registration(registered),
+                              electorate, Registration(registered),
                               starts_at=START, support_until=SUPPORT_END, closes_at=CLOSE)
         procedure.support(people[0], at=START)
         check(procedure.state == "collecting_support", "one supporter opened a six-person referendum")
         procedure.support(people[1], at=START)
         check(procedure.state == "referendum", "required support did not open the referendum")
-        archive, credentials = setup(tool, work, registered)
+        archive, credentials = setup(tool, work, registered, electorate=electorate)
         initial = public / name / "setup" / "election.bel"
         initial.parent.mkdir(parents=True)
         shutil.copyfile(archive, initial)

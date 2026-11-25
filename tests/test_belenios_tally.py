@@ -11,8 +11,25 @@ import unittest
 from unittest.mock import patch
 
 import belenios_demo as demo
-from citizen import Choice, synthetic_identity
+from citizen import Choice, Electorate, synthetic_identity
+from integrations.belenios.electorate import V1, opening_description, opening_electorate
 from integrations.belenios.tally import tally
+
+
+class OpeningElectorate(unittest.TestCase):
+    def test_only_the_public_snapshot_and_population_are_carried(self):
+        snapshot = Electorate("sim-annual", "sim-town", demo.START, [synthetic_identity(1), synthetic_identity(2)])
+        text = opening_description("Local exercise", snapshot)
+        public = opening_electorate(text)
+        self.assertEqual(public, {"snapshot_id": "sim-annual", "jurisdiction": "sim-town",
+                                  "reference_at": demo.START, "eligible": 2})
+        self.assertNotIn("sim-person", text)
+        self.assertIsNone(opening_electorate("Earlier Belenios setup"))
+        for ambiguous in (text + "\n" + text, text.replace(V1, V1.replace("/1 ", "/2 ")),
+                          text.replace('"eligible":2', '"eligible":2,"eligible":3'),
+                          text.replace('"eligible":2', '"eligible":true')):
+            with self.assertRaises(ValueError):
+                opening_electorate(ambiguous)
 
 
 @unittest.skipUnless(os.environ.get("BELENIOS_TOOL"), "needs the pinned native Belenios tool")

@@ -49,10 +49,12 @@ def prepare_ballot(executable, source, setup_sha256, output):
         archive_copy(source, work / "election.bel", setup_sha256)
         require(tool(work, "--version").split()[:1] == [b"3.3.0"], "requires Belenios 3.3.0")
         tool(work, "election", "verify")
-        _, election, question = read_setup(tool, work, MAX_IDENTITIES)
+        _, election, question, opening = read_setup(tool, work, MAX_IDENTITIES)
         # Escape control characters in externally supplied election text on a terminal.
         print("Election", json.dumps(election["name"]), file=sys.stderr)
         print("Question", json.dumps(question["question"]), file=sys.stderr)
+        if opening is not None:
+            print("Opening electorate", json.dumps(opening, sort_keys=True), file=sys.stderr)
         choice = private_line("Choose yes, no or abstain (hidden): ").strip().lower()
         require(choice in [option.value for option in Choice], "choose yes, no or abstain")
         credential = private_line("Private Belenios credential (hidden): ").strip()

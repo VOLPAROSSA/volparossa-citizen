@@ -325,7 +325,7 @@ if __name__ == "__main__":
     single.add_argument("final", help="public closed Belenios archive")
     single.add_argument("--setup-sha256", required=True, help="independently retained initial archive digest")
     single.add_argument("--ballot-sha256", help="look for this voter’s tracker in the verified final count")
-    single.add_argument("--eligible", type=int, required=True, help="independently established full eligible population")
+    single.add_argument("--eligible", type=int, help="check the pinned opening population, or supply it for a legacy setup")
     single.add_argument("--tool", default="belenios-tool", help="installed Belenios 3.3.0 executable")
     args = parser.parse_args()
     if args.command == "demo":

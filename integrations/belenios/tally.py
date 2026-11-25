@@ -11,6 +11,7 @@ import tempfile
 
 from belenios_demo import Tool
 from citizen import MAX_IDENTITIES, referendum_outcome, require
+from integrations.belenios.electorate import opening_electorate
 
 
 def read_setup(tool, initial, eligible):
@@ -42,14 +43,21 @@ def read_setup(tool, initial, eligible):
             and question["answers"] == ["Yes", "No", "Abstain"]
             and isinstance(question["question"], str) and question["question"].strip(),
             "expected one Yes, No or Abstain answer per ballot")
-    return setup, election, question
+    opening = opening_electorate(election["description"])
+    require(opening is None or setup["num_voters"] <= opening["eligible"],
+            "public credentials exceed the opening eligible population")
+    return setup, election, question, opening
 
 
 def verified_tally(tool, initial, final, eligible, ballot_sha256=None):
     """Both directories contain private copies of the public election.bel inputs."""
-    require(type(eligible) is int and 1 <= eligible <= MAX_IDENTITIES, "unsupported eligible population")
+    require(eligible is None or type(eligible) is int and 1 <= eligible <= MAX_IDENTITIES, "unsupported eligible population")
     tool(final, "election", "verify-diff", "--dir1", str(initial), "--dir2", str(final))
-    setup, election, question = read_setup(tool, initial, eligible)
+    setup, election, question, opening = read_setup(tool, initial, MAX_IDENTITIES if eligible is None else eligible)
+    if opening is not None:
+        require(eligible is None or eligible == opening["eligible"], "eligible population differs from the pinned opening")
+        eligible = opening["eligible"]
+    require(eligible is not None, "this setup requires an independently established eligible population")
     closed = json.loads(tool(final, "election", "compute-checksums"))
     require(closed.get("final") and closed.get("encrypted_tally") and all(closed.get(k) == v for k, v in setup.items()),
             "the final archive must close the original election")
@@ -63,6 +71,8 @@ def verified_tally(tool, initial, final, eligible, ballot_sha256=None):
             "verified_ballots": len(ballots), "yes": yes, "no": no, "abstain": abstain,
             "not_voted": eligible - len(ballots), "decision_required": (2 * eligible + 2) // 3,
             "outcome": referendum_outcome(yes, no, eligible).value}
+    if opening is not None:
+        report["opening_electorate"] = opening
     if ballot_sha256 is not None:
         require(re.fullmatch(r"[0-9a-fA-F]{64}", ballot_sha256), "expected a SHA-256 ballot tracker")
         report["ballot_included"] = any(b["hash"] == ballot_sha256.lower() for b in ballots)
@@ -89,7 +99,6 @@ def archive_copy(source, destination, pin=None):
 
 def tally(executable, initial, final, setup_sha256, eligible, ballot_sha256=None):
     require(isinstance(setup_sha256, str), "expected an independent SHA-256 setup digest")
-    require(type(eligible) is int and 1 <= eligible <= MAX_IDENTITIES, "unsupported eligible population")
     tool = Tool(executable)
     with tempfile.TemporaryDirectory() as scratch:
         work = Path(scratch)
